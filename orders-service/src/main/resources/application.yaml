@@ -39,4 +39,4 @@ logging:
   level:
     root: INFO
     ru.eremin: DEBUG
-    org.apache.kafka: WARN
+    org.apache.kafka: INFO
