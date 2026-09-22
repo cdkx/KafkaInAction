@@ -1,0 +1,126 @@
+x-service-build: &service-build
+  context: .
+  dockerfile: docker/Dockerfile
+
+services:
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: kafka
+    hostname: kafka
+    user: "0:0"
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_NUM_PARTITIONS: 6
+
+      KAFKA_LOG_DIRS: '/opt/kafka/kraft-combined-logs'
+
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - kafka_data:/opt/kafka/kraft-combined-logs
+    networks:
+      - kafka-net
+
+  orders-service:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: orders-service
+    container_name: orders-service
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TOPIC_PARTITIONS: "6"
+      TOPIC_REPLICATION: "1"
+      KAFKA_CONCURRENCY: "3"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+  payment-service:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: payment-service
+    container_name: payment-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TOPIC_PARTITIONS: "6"
+      TOPIC_REPLICATION: "1"
+      KAFKA_CONCURRENCY: "3"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+  shipping-service:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: shipping-service
+    container_name: shipping-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TOPIC_PARTITIONS: "6"
+      TOPIC_REPLICATION: "1"
+      KAFKA_CONCURRENCY: "3"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+  notifications-service:
+    build:
+      <<: *service-build
+      args:
+        SERVICE: notifications-service
+    container_name: notifications-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TOPIC_PARTITIONS: "6"
+      TOPIC_REPLICATION: "1"
+      KAFKA_CONCURRENCY: "3"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - kafka-net
+
+volumes:
+  kafka_data:
+
+networks:
+  kafka-net:
+    driver: bridge
