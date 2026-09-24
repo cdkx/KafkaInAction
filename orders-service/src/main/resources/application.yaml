@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: orders-service
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 5
+      properties:
+        "[enable.idempotence]": true
+        "[compression.type]": lz4
+        "[linger.ms]": 20
+        "[batch.size]": 65536
+
+    listener:
+      ack-mode: manual_immediate
+      concurrency: ${KAFKA_CONCURRENCY:3}
+
+app:
+  kafka:
+    partitions: ${TOPIC_PARTITIONS:6}
+    replication: ${TOPIC_REPLICATION:1}
+    listener:
+      concurrency: ${KAFKA_CONCURRENCY:3}
+    topics:
+      new-orders: new_orders
+      payed-orders: payed_orders
+      sent-orders: sent_orders
+
+logging:
+  level:
+    root: INFO
+    ru.eremin: DEBUG
+    org.apache.kafka: INFO
