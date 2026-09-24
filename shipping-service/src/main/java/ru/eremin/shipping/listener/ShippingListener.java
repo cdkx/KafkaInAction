@@ -2,11 +2,11 @@ package ru.eremin.shipping.listener;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
+import ru.eremin.common.config.KafkaProperties;
 import ru.eremin.common.dto.OrderEvent;
 import ru.eremin.common.dto.OrderStatus;
 import ru.eremin.common.kafka.KafkaPublisher;
@@ -19,19 +19,17 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class ShippingListener {
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
-
-    @Value("${app.kafka.topics.sent-orders:sent_orders}")
-    private String sentOrdersTopic;
+    private final KafkaProperties kafkaProperties;
 
     @KafkaListener(
             topics = "${app.kafka.topics.payed-orders:payed_orders}",
             groupId = "shipping-service",
             concurrency = "${app.kafka.listener.concurrency:3}"
     )
-    public void listen(OrderEvent event, Acknowledgment acknowledgment) {
+    public void listen(OrderEvent event, Acknowledgment ack) {
         if (event == null || event.getOrderId() == null) {
             log.warn("[shipping-service] Received empty event");
-            acknowledgment.acknowledge();
+            ack.acknowledge();
             return;
         }
 
@@ -41,7 +39,7 @@ public class ShippingListener {
         if (event.getStatus() != OrderStatus.PAID) {
             log.info("[shipping-service] Skipping non-paid order: orderId={}, status={}",
                     event.getOrderId(), event.getStatus());
-            acknowledgment.acknowledge();
+            ack.acknowledge();
             return;
         }
 
@@ -53,7 +51,11 @@ public class ShippingListener {
         log.info("[shipping-service] Order shipped: orderId={}", event.getOrderId());
 
         try {
-            KafkaPublisher.sendAndWait(kafkaTemplate, sentOrdersTopic, event);
+            KafkaPublisher.sendAndWait(
+                    kafkaTemplate,
+                    kafkaProperties.getTopics().getSentOrders(),
+                    event
+            );
         } catch (Exception e) {
             log.error("[shipping-service] Failed to publish order: orderId={}. Will be retried by error handler",
                     event.getOrderId(), e);
@@ -61,8 +63,8 @@ public class ShippingListener {
         }
 
         log.info("[shipping-service] Published shipped order: orderId={}, topic={}",
-                event.getOrderId(), sentOrdersTopic);
+                event.getOrderId(), kafkaProperties.getTopics().getSentOrders());
 
-        acknowledgment.acknowledge();
+        ack.acknowledge();
     }
 }

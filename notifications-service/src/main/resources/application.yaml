@@ -16,6 +16,17 @@ spring:
         "[spring.json.trusted.packages]": "ru.eremin.common.dto"
         "[spring.json.value.default.type]": ru.eremin.common.dto.OrderEvent
 
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 5
+      properties:
+        "[enable.idempotence]": true
+        "[compression.type]": lz4
+        "[linger.ms]": 20
+        "[batch.size]": 65536
+
     listener:
       ack-mode: manual_immediate
       concurrency: ${KAFKA_CONCURRENCY:3}

@@ -2,11 +2,11 @@ package ru.eremin.payment.listener;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
+import ru.eremin.common.config.KafkaProperties;
 import ru.eremin.common.dto.OrderEvent;
 import ru.eremin.common.dto.OrderStatus;
 import ru.eremin.common.exception.NonRetryableEventException;
@@ -21,19 +21,18 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class PaymentListener {
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
+    private final KafkaProperties kafkaProperties;
 
-    @Value("${app.kafka.topics.payed-orders:payed_orders}")
-    private String payedOrdersTopic;
 
     @KafkaListener(
             topics = "${app.kafka.topics.new-orders:new_orders}",
             groupId = "payment-service",
             concurrency = "${app.kafka.listener.concurrency:3}"
     )
-    public void listen(OrderEvent event, Acknowledgment acknowledgment) {
+    public void listen(OrderEvent event, Acknowledgment ack) {
         if (event == null || event.getOrderId() == null) {
             log.warn("[payment-service] Received empty event");
-            acknowledgment.acknowledge();
+            ack.acknowledge();
             return;
         }
 
@@ -43,7 +42,7 @@ public class PaymentListener {
         if (event.getStatus() != OrderStatus.NEW) {
             log.info("[payment-service] Skipping non-new order: orderId={}, status={}",
                     event.getOrderId(), event.getStatus());
-            acknowledgment.acknowledge();
+            ack.acknowledge();
             return;
         }
 
@@ -62,15 +61,19 @@ public class PaymentListener {
         log.info("[payment-service] Payment completed: orderId={}", event.getOrderId());
 
         try {
-            KafkaPublisher.sendAndWait(kafkaTemplate, payedOrdersTopic, event);
+            KafkaPublisher.sendAndWait(
+                    kafkaTemplate,
+                    kafkaProperties.getTopics().getPayedOrders(),
+                    event);
         } catch (Exception e) {
             log.error("[payment-service] Failed to publish paid order: orderId={}. Will be retried by error handler",
                     event.getOrderId(), e);
             throw e;
         }
 
-        log.info("[payment-service] Published paid order: orderId={}, topic={}", event.getOrderId(), payedOrdersTopic);
+        log.info("[payment-service] Published paid order: orderId={}, topic={}",
+                event.getOrderId(), kafkaProperties.getTopics().getPayedOrders());
 
-        acknowledgment.acknowledge();
+        ack.acknowledge();
     }
 }

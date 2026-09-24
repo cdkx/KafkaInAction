@@ -22,7 +22,6 @@ spring:
       acks: all
       retries: 5
       properties:
-        "[partitioner.class]": ru.eremin.common.kafka.LoadBalancingPartitioner
         "[enable.idempotence]": true
         "[compression.type]": lz4
         "[linger.ms]": 20

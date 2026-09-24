@@ -2,9 +2,9 @@ package ru.eremin.orders.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import ru.eremin.common.config.KafkaProperties;
 import ru.eremin.common.dto.OrderEvent;
 import ru.eremin.common.dto.OrderStatus;
 import ru.eremin.common.kafka.KafkaPublisher;
@@ -22,9 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class OrderService {
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
+    private final KafkaProperties kafkaProperties;
 
-    @Value("${app.kafka.topics.new-orders:new_orders}")
-    private String newOrdersTopic;
 
     private final Map<String, OrderEvent> orders = new ConcurrentHashMap<>();
 
@@ -47,9 +46,9 @@ public class OrderService {
 
         log.info("[orders-service] Creating order: orderId={}, userId={}", orderId, request.getUserId());
 
-        KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic, event);
+        KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic(), event);
 
-        log.info("[orders-service] Order published to Kafka: orderId={}, topic={}", orderId, newOrdersTopic);
+        log.info("[orders-service] Order published to Kafka: orderId={}, topic={}", orderId, newOrdersTopic());
 
         return event;
     }
@@ -64,7 +63,7 @@ public class OrderService {
 
         if (updated != null) {
             log.info("[orders-service] Order status updated: orderId={}, newStatus={}", orderId, status);
-            KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic, updated);
+            KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic(), updated);
         } else {
             log.warn("[orders-service] Order not found: orderId={}", orderId);
         }
@@ -74,5 +73,9 @@ public class OrderService {
 
     public Optional<OrderEvent> getOrder(String orderId) {
         return Optional.ofNullable(orders.get(orderId));
+    }
+
+    private String newOrdersTopic() {
+        return kafkaProperties.getTopics().getNewOrders();
     }
 }
