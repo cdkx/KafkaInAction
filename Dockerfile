@@ -22,7 +22,12 @@ COPY docker .
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -pl ${SERVICE} -am package -DskipTests
 
-RUN JAR_PATH=$(find /build/${SERVICE}/target -maxdepth 1 -name "*.jar" ! -name "*.original" ! -name "*-plain.jar" | head -n 1) \
+RUN JAR_PATH=$(find /build/${SERVICE}/target \
+    -maxdepth 1 \
+    -name "*.jar" \
+    ! -name "*.original" \
+    ! -name "*-plain.jar" \
+    -print -quit) \
     && cp "$JAR_PATH" /build/app.jar
 
 
