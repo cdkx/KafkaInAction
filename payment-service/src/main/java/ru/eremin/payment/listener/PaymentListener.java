@@ -23,7 +23,6 @@ public class PaymentListener {
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
     private final KafkaProperties kafkaProperties;
 
-
     @KafkaListener(
             topics = "${app.kafka.topics.new-orders:new_orders}",
             groupId = "payment-service",
@@ -64,7 +63,8 @@ public class PaymentListener {
             KafkaPublisher.sendAndWait(
                     kafkaTemplate,
                     kafkaProperties.getTopics().getPayedOrders(),
-                    event);
+                    event
+            );
         } catch (Exception e) {
             log.error("[payment-service] Failed to publish paid order: orderId={}. Will be retried by error handler",
                     event.getOrderId(), e);

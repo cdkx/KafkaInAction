@@ -17,10 +17,10 @@ public class NotificationListener {
             groupId = "notifications-service",
             concurrency = "${app.kafka.listener.concurrency:3}"
     )
-    public void listen(OrderEvent event, Acknowledgment acknowledgment) {
+    public void listen(OrderEvent event, Acknowledgment ack) {
         if (event == null || event.getOrderId() == null) {
             log.warn("[notifications-service] Received empty event");
-            acknowledgment.acknowledge();
+            ack.acknowledge();
             return;
         }
 
@@ -29,7 +29,7 @@ public class NotificationListener {
 
         if (event.getStatus() != OrderStatus.SENT) {
             log.info("[notifications-service] Skipping non-sent order: orderId={}", event.getOrderId());
-            acknowledgment.acknowledge();
+            ack.acknowledge();
             return;
         }
 
@@ -38,6 +38,6 @@ public class NotificationListener {
                 event.getOrderId(),
                 "Your order has been successfully delivered");
 
-        acknowledgment.acknowledge();
+        ack.acknowledge();
     }
 }

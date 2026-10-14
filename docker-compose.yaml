@@ -1,6 +1,6 @@
 x-service-build: &service-build
   context: .
-  dockerfile: docker/Dockerfile
+  dockerfile: Dockerfile
 
 services:
   kafka:

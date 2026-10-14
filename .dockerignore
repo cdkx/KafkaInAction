@@ -1,11 +1,24 @@
 .git
 .idea
-*.iml
 .vscode
 .DS_Store
+**/.DS_Store
 
+**/*.iml
 **/target
 **/logs
-*.log
+**/*.log
 
 docker-compose.yaml
+docker-compose.yml
+compose.yaml
+compose.yml
+
+Dockerfile
+.dockerignore
+
+*.md
+.gitignore
+.mvn/
+mvnw
+mvnw.cmd
