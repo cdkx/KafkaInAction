@@ -17,7 +17,7 @@ COPY notifications-service/pom.xml notifications-service/
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -pl ${SERVICE} -am dependency:go-offline -DskipTests || true
 
-COPY docker .
+COPY . .
 
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -pl ${SERVICE} -am package -DskipTests

@@ -29,6 +29,7 @@ public class OrderService {
 
     public OrderEvent createOrder(CreateOrderRequest request) {
         String orderId = UUID.randomUUID().toString();
+        String correlationId = UUID.randomUUID().toString();
 
         OrderEvent event = OrderEvent.builder()
                 .orderId(orderId)
@@ -44,11 +45,13 @@ public class OrderService {
 
         orders.put(orderId, event);
 
-        log.info("[orders-service] Creating order: orderId={}, userId={}", orderId, request.getUserId());
+        log.info("[orders-service] Creating order: orderId={}, userId={}, correlationId={}",
+                orderId, request.getUserId(), correlationId);
 
-        KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic(), event);
+        KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic(), event, correlationId);
 
-        log.info("[orders-service] Order published to Kafka: orderId={}, topic={}", orderId, newOrdersTopic());
+        log.info("[orders-service] Order published to Kafka: orderId={}, topic={}, correlationId={}",
+                orderId, newOrdersTopic(), correlationId);
 
         return event;
     }
@@ -62,8 +65,10 @@ public class OrderService {
         });
 
         if (updated != null) {
-            log.info("[orders-service] Order status updated: orderId={}, newStatus={}", orderId, status);
-            KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic(), updated);
+            String correlationId = UUID.randomUUID().toString();
+            log.info("[orders-service] Order status updated: orderId={}, newStatus={}, correlationId={}",
+                    orderId, status, correlationId);
+            KafkaPublisher.sendAndWait(kafkaTemplate, newOrdersTopic(), updated, correlationId);
         } else {
             log.warn("[orders-service] Order not found: orderId={}", orderId);
         }
